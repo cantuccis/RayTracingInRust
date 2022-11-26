@@ -18,8 +18,8 @@ fn main() {
 
     // Image
     let aspect_ratio = 16.0 / 9.0;
-    let image_width = 256;
-    let image_height = 256;
+    let image_width = 400;
+    let image_height = ((image_width as f64) / aspect_ratio) as i32;
 
     // Camera
     let viewport_height = 2.0;
@@ -30,7 +30,7 @@ fn main() {
     let horizontal = Vector3::new(viewport_width, 0.0, 0.0);
     let vertical = Vector3::new(0.0, viewport_height, 0.0);
     let lower_left_corner =
-        origin - (horizontal / 2.0) -( vertical / 2.0) - Vector3::new(0.0, 0.0, focal_length);
+        origin - (horizontal / 2.0) - (vertical / 2.0) - Vector3::new(0.0, 0.0, focal_length);
 
     // Render
     print!("P3\n {image_width} {image_height} \n255\n");
@@ -40,13 +40,15 @@ fn main() {
         for i in 0..image_width {
             let u = (i as f64) / ((image_width - 1) as f64);
             let v = (j as f64) / ((image_height - 1) as f64);
-            let r = Ray::new(origin, lower_left_corner + u*horizontal + v*vertical - origin);
+            let r = Ray::new(
+                origin,
+                lower_left_corner + u * horizontal + v * vertical - origin,
+            );
             write_color(&r.color());
         }
     }
     log::info!("\nDone.\n");
 }
-
 
 fn set_up_logger() -> Result<(), RendererError> {
     let Ok(logfile) = FileAppender::builder()
