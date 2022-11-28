@@ -1,4 +1,6 @@
-use super::{color::Color, point3::Point3, hittable::Hittable};
+use crate::{random_in_hemisphere, random_vector_in_unit_sphere};
+
+use super::{color::Color, hittable::Hittable, point3::Point3};
 use nalgebra::Vector3;
 use rand::Rng;
 
@@ -20,25 +22,23 @@ impl Ray {
     pub fn at(&self, t: f64) -> Vector3<f64> {
         self.a + t * self.b
     }
-    pub fn color(&self, world : &dyn Hittable) -> Color {
-        if let Some(hit) = world.hit(&self, 0.0, f64::MAX) {
-            0.5 * (hit.normal + Color::new(1.0, 1.0, 1.0))
+    pub fn color(&self, world: &dyn Hittable, depth: i32) -> Color {
+        if depth <= 0 {
+            return Color::new(0.0, 0.0, 0.0);
+        }
+
+        if let Some(hit) = world.hit(&self, 0.001, f64::MAX) {
+            if let Some((scattered, attenuation)) = hit.material.scatter(self, &hit) {
+                return attenuation.zip_map(&scattered.color(world, depth - 1), |l, r| l * r);
+            } else {
+                return Vector3::new(0.0, 0.0, 0.0);
+            }
         } else {
             let unit_direction = self.direction().normalize();
             let t = 0.5 * (unit_direction.y + 1.0);
-            (1.0 - t) * Color::new(1.0, 1.0, 1.0) + t * Color::new(0.5, 0.7, 1.0)
-        }   
-    }
-
-    fn random_in_unit_sphere() -> Vector3<f32> {
-        let mut rng = rand::thread_rng();
-        let unit = Vector3::new(1.0, 1.0, 1.0);
-        loop {
-            let p = 2.0 * Vector3::new(rng.gen::<f32>(), rng.gen::<f32>(), rng.gen::<f32>()) - unit;
-            if p.magnitude_squared() < 1.0 {
-                return p
-            }
+            return (1.0 - t) * Color::new(1.0, 1.0, 1.0) + t * Color::new(0.5, 0.7, 1.0);
         }
     }
 
+    
 }
