@@ -33,7 +33,7 @@ fn main() {
             let image_width = 400;
             let image_height = (image_width as f64 / aspect_ratio) as i32;
             let samples_per_pixel = 100;
-            let max_depth = 10;
+            let max_depth = 50;
 
             // ZAWAAARDO (world)
             // let R = f64::cos(f64::consts::PI / 4.0);
@@ -48,7 +48,7 @@ fn main() {
             });
             let material_right = Rc::new(Metal {
                 albedo: Color::new(0.8, 0.6, 0.2),
-                fuzz: 1.0,
+                fuzz: 0.0,
             });
             // let material_left = Lambertian {
             //     albedo: Color::new(0.0,0.0,1.0)
@@ -95,15 +95,21 @@ fn main() {
             // ));
 
             // Camera
-            let viewport_height = 2.0;
-            let viewport_width = aspect_ratio * viewport_height;
-            let focal_length = 1.0;
-            let look_from = Point3::new(-2.0, 2.0, 1.0);
+            let look_from = Point3::new(3.0, 3.0, 2.0);
             let look_at = Point3::new(0.0, 0.0, -1.0);
             let vup = Vector3::new(0.0, 1.0, 0.0);
-            let vfov = 90.0;
-
-            let cam = Camera::new(look_from, look_at, vup, vfov, aspect_ratio);
+            let vfov = 20.0;
+            let aperture = 2.0;
+            let dist_to_focus = (look_from - look_at).magnitude() as f64;
+            let cam = Camera::new(
+                look_from,
+                look_at,
+                vup,
+                vfov,
+                aspect_ratio,
+                aperture,
+                dist_to_focus,
+            );
 
             // Render
             print!("P3\n {image_width} {image_height} \n255\n");
@@ -197,6 +203,19 @@ fn random_vector_within(min: f64, max: f64) -> Vector3<f64> {
 fn random_vector_in_unit_sphere() -> Vector3<f64> {
     loop {
         let p = random_vector_within(-1.0, 1.0);
+        if p.magnitude_squared() < 1.0 {
+            return p;
+        }
+    }
+}
+
+fn random_vector_in_unit_disk() -> Vector3<f64> {
+    loop {
+        let p = Vector3::new(
+            random_double_within(-1.0, 1.0),
+            random_double_within(-1.0, 1.0),
+            0.0,
+        );
         if p.magnitude_squared() < 1.0 {
             return p;
         }

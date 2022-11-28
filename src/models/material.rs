@@ -34,7 +34,7 @@ pub struct Metal {
 
 impl Material for Metal {
     fn scatter(&self, ray_in: &Ray, hit_record: &HitRecord) -> Option<(Ray, Color)> {
-        let fuzz = if self.fuzz < 1.0 { 1.0 } else { self.fuzz };
+        let fuzz = if self.fuzz < 1.0 { self.fuzz } else { 1.0 };
 
         let reflected = reflect(ray_in.direction().normalize(), hit_record.normal);
         let scattered = Ray::new(
