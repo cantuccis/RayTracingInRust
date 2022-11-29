@@ -5,7 +5,7 @@ use crate::random_vector_in_unit_sphere;
 
 use super::{color::Color, hittable::HitRecord, ray::Ray};
 
-pub trait Material: Sync {
+pub trait Material: Send + Sync {
     fn scatter(&self, ray_in: &Ray, hit_record: &HitRecord) -> Option<(Ray, Color)>;
 }
 

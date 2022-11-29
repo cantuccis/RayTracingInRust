@@ -1,4 +1,5 @@
 use std::rc::Rc;
+use std::sync::{Mutex, Arc};
 
 use nalgebra::Vector3;
 
@@ -9,16 +10,16 @@ use super::ray::Ray;
 pub struct Sphere{
     center: Vector3<f64>,
     radius: f64,
-    material: Rc<dyn Material>,
+    material: Arc<dyn Material>,
 }
 
-impl Sphere {
-    pub fn new(center: Vector3<f64>, radius: f64, material: Rc<dyn Material> ) -> Self {
+impl Sphere{
+    pub fn new(center: Vector3<f64>, radius: f64, material: Arc<dyn Material> ) -> Self {
         Sphere { center, radius, material }
     }
 }
 
-impl Hittable for Sphere{
+impl Hittable for Sphere {
     fn hit(&self, ray: &Ray, t_min: f64, t_max: f64) -> Option<HitRecord> {
         let oc = ray.origin() - self.center;
         let a = ray.direction().dot(&ray.direction());
