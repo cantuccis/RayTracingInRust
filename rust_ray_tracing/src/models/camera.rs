@@ -1,26 +1,21 @@
 use nalgebra::Vector3;
-
-use crate::random_vector_in_unit_disk;
-
-use super::{point3::Point3, ray::Ray};
+use super::{point::Point, ray::Ray, util::random_vector_in_unit_disk};
 use std::f64;
 
 pub struct Camera {
-    origin: Point3,
+    origin: Point,
     horizontal: Vector3<f64>,
     vertical: Vector3<f64>,
     lower_left_corner: Vector3<f64>,
     lens_radius: f64,
     u: Vector3<f64>,
     v: Vector3<f64>,
-    w: Vector3<f64>,
-
 }
 
 impl Camera {
     pub fn new(
-        look_from: Point3,
-        look_at: Point3,
+        look_from: Point,
+        look_at: Point,
         vup: Vector3<f64>,
         vertical_field_of_view: f64,
         aspect_ratio: f64,
@@ -47,7 +42,6 @@ impl Camera {
             lens_radius,
             u,
             v,
-            w,
         }
     }
 

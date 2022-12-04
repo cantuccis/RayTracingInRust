@@ -1,8 +1,6 @@
-use crate::{random_in_hemisphere, random_vector_in_unit_sphere};
 
-use super::{color::Color, hittable::Hittable, point3::Point3};
+use super::{color::Color, hittable::Hittable};
 use nalgebra::Vector3;
-use rand::Rng;
 
 pub struct Ray {
     a: Vector3<f64>,

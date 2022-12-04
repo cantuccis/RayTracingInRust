@@ -1,21 +1,22 @@
-use std::rc::Rc;
-use std::sync::{Mutex, Arc};
-
+use std::sync::Arc;
 use nalgebra::Vector3;
-
 use super::hittable::{HitRecord, Hittable};
 use super::material::Material;
 use super::ray::Ray;
 
-pub struct Sphere{
+pub struct Sphere {
     center: Vector3<f64>,
     radius: f64,
     material: Arc<dyn Material>,
 }
 
-impl Sphere{
-    pub fn new(center: Vector3<f64>, radius: f64, material: Arc<dyn Material> ) -> Self {
-        Sphere { center, radius, material }
+impl Sphere {
+    pub fn new(center: Vector3<f64>, radius: f64, material: Arc<dyn Material>) -> Self {
+        Sphere {
+            center,
+            radius,
+            material,
+        }
     }
 }
 

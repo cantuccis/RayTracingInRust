@@ -1,9 +1,7 @@
 use nalgebra::Vector3;
 use rand::Rng;
 
-use crate::random_vector_in_unit_sphere;
-
-use super::{color::Color, hittable::HitRecord, ray::Ray};
+use super::{color::Color, hittable::HitRecord, ray::Ray, util::random_vector_in_unit_sphere};
 
 pub trait Material: Send + Sync {
     fn scatter(&self, ray_in: &Ray, hit_record: &HitRecord) -> Option<(Ray, Color)>;
@@ -56,18 +54,21 @@ pub struct Dielectric {
 impl Material for Dielectric {
     fn scatter(&self, ray_in: &Ray, hit_record: &HitRecord) -> Option<(Ray, Color)> {
         let attenuation = Vector3::new(1.0, 1.0, 1.0);
-        let (outward_normal, etai_over_etat, cosine) = if ray_in.direction().dot(&hit_record.normal) > 0.0 {
-            let cosine = self.index_of_refraction * ray_in.direction().dot(&hit_record.normal) / ray_in.direction().magnitude();
-            (-hit_record.normal, self.index_of_refraction, cosine)
-        } else {
-            let cosine = -ray_in.direction().dot(&hit_record.normal) / ray_in.direction().magnitude();
-            (hit_record.normal, 1.0 / self.index_of_refraction, cosine)
-        };
+        let (outward_normal, etai_over_etat, cosine) =
+            if ray_in.direction().dot(&hit_record.normal) > 0.0 {
+                let cosine = self.index_of_refraction * ray_in.direction().dot(&hit_record.normal)
+                    / ray_in.direction().magnitude();
+                (-hit_record.normal, self.index_of_refraction, cosine)
+            } else {
+                let cosine =
+                    -ray_in.direction().dot(&hit_record.normal) / ray_in.direction().magnitude();
+                (hit_record.normal, 1.0 / self.index_of_refraction, cosine)
+            };
         if let Some(refracted) = refract(&ray_in.direction(), &outward_normal, etai_over_etat) {
             let reflect_prob = reflectance(cosine, self.index_of_refraction);
             if rand::thread_rng().gen::<f64>() >= reflect_prob {
                 let scattered = Ray::new(hit_record.p, refracted);
-                return Some((scattered, attenuation))
+                return Some((scattered, attenuation));
             }
         }
         let reflected = reflect(ray_in.direction(), hit_record.normal);
@@ -82,7 +83,7 @@ fn reflect(v: Vector3<f64>, n: Vector3<f64>) -> Vector3<f64> {
 
 fn reflectance(cosine: f64, ref_idx: f64) -> f64 {
     let r0 = ((1.0 - ref_idx) / (1.0 + ref_idx)).powi(2);
-    r0 + (1.0 -r0) * (1.0 - cosine).powi(5)
+    r0 + (1.0 - r0) * (1.0 - cosine).powi(5)
 }
 
 fn refract(v: &Vector3<f64>, n: &Vector3<f64>, etai_over_etat: f64) -> Option<Vector3<f64>> {

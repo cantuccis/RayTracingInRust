@@ -1,11 +1,11 @@
-use std::{rc::Rc, sync::{Mutex, Arc}};
+use std::sync::Arc;
 
-use super::{material::Material, point3::Point3, ray::Ray};
+use super::{material::Material, point::Point, ray::Ray};
 use nalgebra::Vector3;
 
 pub struct HitRecord {
     pub t: f64,
-    pub p: Point3,
+    pub p: Point,
     pub normal: Vector3<f64>,
     pub front_face: bool,
     pub material: Arc<dyn Material>,

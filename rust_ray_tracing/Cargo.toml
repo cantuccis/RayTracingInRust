@@ -1,0 +1,11 @@
+[package]
+name = "rust_ray_tracing"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+color-eyre = "0.6.2"
+result = "1.0.0"
+nalgebra = "0.31.0"
+rand = "0.8.5"
+rayon = "1.5"

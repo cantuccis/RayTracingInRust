@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Page Title</title>
+</head>
+
+<body>
+    <script type="module">
+        var $canvas = document.getElementById("display");
+        var ctxt = $canvas.getContext("2d");
+        var _toArray = function (arr) { return Array.isArray(arr) ? arr : Array.from(arr); };
+        var zoom = 2;
+        let display = function (ppmString) {
+            // Remove lines comment lines beginning with '#', then rejoin.
+            var lines = ppmString.split("\n").filter(function (l) {
+                return !l.match(/^#/);
+            }).join("\n");
+
+            var whitespace = /[ \t\r\n]+/;
+            var fields = lines.split(whitespace);
+
+            var _fields = _toArray(fields);
+
+            var magic = _fields[0];
+            var width = _fields[1];
+            var height = _fields[2];
+            var maxVal = _fields[3];
+
+            var pixelData = _fields.slice(4);
+
+            if (magic !== "P3") return error("Expected 'P3' magic number at the beginning of the file, got " + magic);
+
+            width = parseInt(width, 10);
+            if (isNaN(width)) return error("Expected a decimal value for width, got " + width);
+
+            height = parseInt(height, 10);
+            if (isNaN(height)) return error("Expected a decimal value for height, got " + height);
+
+            maxVal = parseInt(maxVal, 10);
+            if (isNaN(maxVal) || maxVal < 0 || maxVal >= 65536) return error("Expected a positive decimal less than 65536 for maximum color value, got " + maxVal);
+
+            // Prepare canvas
+            $canvas.width = width;
+            $canvas.height = height;
+            $canvas.style.width = "" + $canvas.width * zoom + "px";
+            $canvas.style.height = "" + $canvas.height * zoom + "px";
+
+            var imgData = ctxt.createImageData(width, height);
+            var pixels = imgData.data;
+
+            var to255 = 255 / maxVal;
+            var pdi, pi, r, g, b, y, x;
+            for (y = 0, pdi = 0, pi = 0; y < height; ++y) {
+                for (x = 0; x < width; ++x, pdi += 3, pi += 4) {
+                    r = parseInt(pixelData[pdi]);
+                    if (isNaN(r)) return error("Expected a decimal value for red component, got " + r);
+                    g = parseInt(pixelData[pdi + 1]);
+                    if (isNaN(g)) return error("Expected a decimal value for green component, got " + g);
+                    b = parseInt(pixelData[pdi + 2]);
+                    if (isNaN(b)) return error("Expected a decimal value for blue component, got " + b);
+
+                    r *= to255;
+                    g *= to255;
+                    b *= to255;
+                    pixels.set([r, g, b, 255], pi);
+                }
+            }
+
+            ctxt.putImageData(imgData, 0, 0);
+        }
+
+
+
+        import init, { render } from './pkg/wasm_rust_ray_tracing.js';
+        await init();
+        var image = render(600,20,20);
+        display(image);
+
+    </script>
+
+    <canvas id="display" width="100" height="100" style="float:left"></canvas>
+
+</body>
+
+</html>
