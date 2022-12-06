@@ -1,4 +1,3 @@
-use std::sync::Arc;
 use super::camera::Camera;
 use super::color::Color;
 use super::hittable::Hittable;
@@ -8,6 +7,7 @@ use super::point::Point;
 use super::sphere::Sphere;
 use super::util::*;
 use nalgebra::Vector3;
+use std::sync::Arc;
 
 pub struct Renderer {
     pub image_width: i32,
@@ -37,6 +37,18 @@ impl Renderer {
         collected
     }
 
+    pub fn render_pixel(&self, x: i32, y: i32) -> Vec<u8> {
+        let sampled_pixel: Color = (0..self.samples_per_pixel)
+            .map(|_| {
+                let u = (x as f64 + random_double()) / ((self.image_width - 1) as f64);
+                let v = (y as f64 + random_double()) / ((self.image_height - 1) as f64);
+                let ray = self.cam.get_ray(u, v);
+                ray.color(self.world.as_ref(), self.max_depth)
+            })
+            .sum();
+        self.pixel_to_rgb(&sampled_pixel)
+    }
+
     fn pixel_to_rgb(&self, pixel_color: &Color) -> Vec<u8> {
         let scale = 1.0 / (self.samples_per_pixel as f64);
         let r = (pixel_color.x * scale).sqrt();
@@ -48,7 +60,7 @@ impl Renderer {
         vec![clamped_r, clamped_g, clamped_b]
     }
 
-    pub fn sample(image_width: i32, samples_per_pixel:i32, max_depth:i32) -> Self {
+    pub fn sample(image_width: i32, samples_per_pixel: i32, max_depth: i32) -> Self {
         // ZAWAAARDO (world)
         let mut world = HittableList::default();
 
@@ -83,7 +95,7 @@ impl Renderer {
         // Image
         let aspect_ratio = 3.0 / 2.0;
         let image_height = (image_width as f64 / aspect_ratio) as i32;
-        
+
         // Camera
         let look_from = Point::new(13.0, 2.0, 3.0);
         let look_at = Point::new(0.0, 0.0, 0.0);
@@ -100,7 +112,7 @@ impl Renderer {
             aperture,
             dist_to_focus,
         );
-        
+
         Renderer {
             image_width,
             image_height,

@@ -1,124 +1,162 @@
-
+use futures_channel::oneshot;
+use js_sys::{Promise, Uint8ClampedArray, WebAssembly};
+use rayon::prelude::*;
 use wasm_bindgen::prelude::*;
+use wasm_bindgen::JsCast;
 use rust_ray_tracing::models::renderer::Renderer;
 
-#[wasm_bindgen]
-pub fn render(image_width: i32, samples_per_pixel:i32, max_depth:i32) -> String {
-    let renderer = Renderer::sample(image_width, samples_per_pixel, max_depth);
-    let image_height = renderer.image_height;
-    let mut final_image: Vec<u8> = vec![]; // Render
-    let mut image_string = format!("P3\n{image_width} {image_height}\n255\n");
-
-    let image_height_vec: Vec<i32> = (0..image_height).rev().collect::<Vec<_>>();
-    for chunk in image_height_vec.chunks(image_height as usize) {
-        let mut image = chunk
-            .into_iter()
-            .flat_map(|y| {
-                renderer.render_line(*y)
-            })
-            .collect::<Vec<u8>>();
-        final_image.append(&mut image);
-    }
-    for col in final_image.chunks(3) {
-        image_string += format!("{} {} {}\n", col[0], col[1], col[2]).as_str();
-    }
-    return image_string;
+macro_rules! console_log {
+    ($($t:tt)*) => (crate::log(&format_args!($($t)*).to_string()))
 }
 
-// pub fn render(image_width: i32, samples_per_pixel:i32, max_depth:i32) -> String {    const N: usize = 1_000_000;
+mod pool;
 
-//     // ZAWAAARDO (world)
-//     let mut world = HittableList::default();
-//     let material_ground = Arc::new(Lambertian {
-//         albedo: Color::new(0.5, 0.5, 0.5),
-//     });
-//     world.push(Sphere::new(
-//         Point::new(0.0, -1000.0, 0.0),
-//         1000.0,
-//         material_ground.clone(),
-//     ));
-//     populate_random_scene(&mut world);
+#[wasm_bindgen]
+extern "C" {
+    #[wasm_bindgen(js_namespace = console)]
+    fn log(s: &str);
+    #[wasm_bindgen(js_namespace = console, js_name = log)]
+    fn logv(x: &JsValue);
+}
 
-//     //big balls
-//     let material1 = Arc::new(Dielectric {
-//         index_of_refraction: 1.5,
-//     });
-//     world.push(Sphere::new(Point::new(0.0, 1.0, 0.0), 1.0, material1));
+#[wasm_bindgen]
+pub struct Scene {
+    // inner: raytracer::scene::Scene,
+}
 
-//     let material2 = Arc::new(Lambertian {
-//         albedo: Color::new(0.4, 0.2, 0.1),
-//     });
-//     world.push(Sphere::new(Point::new(-4.0, 1.0, 0.0), 1.0, material2));
+#[wasm_bindgen]
+impl Scene {
+    /// Creates a new scene from the JSON description in `object`, which we
+    /// deserialize here into an actual scene.
+    #[wasm_bindgen(constructor)]
+    pub fn new(object: JsValue) -> Result<Scene, JsValue> {
+        console_error_panic_hook::set_once();
+        Ok(Scene {
+            // inner: serde_wasm_bindgen::from_value(object)
+            //     .map_err(|e| JsValue::from(e.to_string()))?,
+        })
+    }
 
-//     let material3 = Arc::new(Metal {
-//         albedo: Color::new(0.7, 0.6, 0.5),
-//         fuzz: 0.0,
-//     });
-//     world.push(Sphere::new(Point::new(4.0, 1.0, 0.0), 1.0, material3));
+    /// Renders this scene with the provided concurrency and worker pool.
+    ///
+    /// This will spawn up to `concurrency` workers which are loaded from or
+    /// spawned into `pool`. The `RenderingScene` state contains information to
+    /// get notifications when the render has completed.
+    pub fn render(
+        self,
+        image_width:i32,
+        samples_per_pixel:i32,
+        max_depth:i32,
+        concurrency: usize,
+        pool: &pool::WorkerPool,
+    ) -> Result<RenderingScene, JsValue> {
+        let renderer = Renderer::sample(image_width, samples_per_pixel, max_depth);
+        let height = renderer.image_height;
+        let width = renderer.image_width;
 
-//     // Image
-//     let aspect_ratio = 3.0 / 2.0;
-//     // let image_width = 400;
-//     let image_height = (image_width as f64 / aspect_ratio) as i32;
-//     // let samples_per_pixel = 50;
-//     // let max_depth = 50;
-//     // Camera
-//     let look_from = Point::new(13.0, 2.0, 3.0);
-//     let look_at = Point::new(0.0, 0.0, 0.0);
-//     let vup = Vector3::new(0.0, 1.0, 0.0);
-//     let vfov = 20.0;
-//     let aperture = 0.1;
-//     let dist_to_focus = 10.0;
-//     let cam = Camera::new(
-//         look_from,
-//         look_at,
-//         vup,
-//         vfov,
-//         aspect_ratio,
-//         aperture,
-//         dist_to_focus,
-//     );
+        // Allocate the pixel data which our threads will be writing into.     
+        let pixels = (width * height) as usize;
+        let mut rgb_data = vec![0; 4 * pixels];
+        let base = rgb_data.as_ptr() as usize;
+        let len = rgb_data.len();
 
-//     let mut final_image: Vec<u8> = vec![]; // Render
-//     let mut image_string = format!("P3\n{image_width} {image_height}\n255\n");
-//     print!("P3\n{image_width} {image_height}\n255\n");
+        // Configure a rayon thread pool which will pull web workers from
+        // `pool`.
+        let thread_pool = rayon::ThreadPoolBuilder::new()
+            .num_threads(concurrency)
+            .spawn_handler(|thread| Ok(pool.run(|| thread.run()).unwrap()))
+            .build()
+            .unwrap();
 
-//     let image_height_vec: Vec<i32> = (0..image_height).rev().collect::<Vec<_>>();
-//     for chunk in image_height_vec.chunks(image_height as usize) {
-//         let mut image = chunk
-//             .into_iter()
-//             .flat_map(|y| {
-//                 let collected = (0..image_width)
-//                     .flat_map(|x| {
-//                         let col: Vector3<f64> = (0..samples_per_pixel)
-//                             .map(|_| {
-//                                 let u = (x as f64 + random_double()) / ((image_width - 1) as f64);
-//                                 let v = (*y as f64 + random_double()) / ((image_height - 1) as f64);
-//                                 let ray = cam.get_ray(u, v);
-//                                 ray.color(&world, max_depth)
-//                             })
-//                             .sum();
-//                         let collected_x = col
-//                             .iter()
-//                             .map(|c| {
-//                                 (255.99 * (c / samples_per_pixel as f64).sqrt().max(0.0).min(1.0))
-//                                     as u8
-//                             })
-//                             .collect::<Vec<u8>>();
-//                         collected_x
-//                     })
-//                     .collect::<Vec<u8>>();
-//                 collected
-//             })
-//             .collect::<Vec<u8>>();
-//         for col in image.chunks(3) {
-//             println!("{} {} {}", col[0], col[1], col[2]);
-//         }
-//         final_image.append(&mut image);
-//     }
-//     for col in final_image.chunks(3) {
-//         image_string += format!("{} {} {}\n", col[0], col[1], col[2]).as_str();
-//     }
-//     return image_string;
-// }
+        // And now execute the render! The entire render happens on our worker
+        // threads so we don't lock up the main thread, so we ship off a thread
+        // which actually does the whole rayon business. When our returned
+        // future is resolved we can pull out the final version of the image.
+        let (tx, rx) = oneshot::channel();
+        pool.run(move || {
+            thread_pool.install(|| {
+                rgb_data
+                    .par_chunks_mut(4)
+                    .enumerate()
+                    .for_each(|(i, chunk)| {
+                        let i = i as i32;
+                        let x = i % width;
+                        let y = i / width;
+                        let pixel = renderer.render_pixel(x, height - y);
+                        chunk[0] = pixel[0];
+                        chunk[1] = pixel[1];
+                        chunk[2] = pixel[2];
+                        chunk[3] = 255;
+                    });
+            });
+            drop(tx.send(rgb_data));
+        })?;
 
+        let done = async move {
+            match rx.await {
+                Ok(_data) => Ok(image_data(base, len, width, height).into()),
+                Err(_) => Err(JsValue::undefined()),
+            }
+        };
+
+        Ok(RenderingScene {
+            promise: wasm_bindgen_futures::future_to_promise(done),
+            base,
+            len,
+            height,
+            width,
+        })
+    }
+}
+
+#[wasm_bindgen]
+pub struct RenderingScene {
+    base: usize,
+    len: usize,
+    promise: Promise,
+    width: i32,
+    height: i32,
+}
+
+// Inline the definition of `ImageData` here because `web_sys` uses
+// `&Clamped<Vec<u8>>`, whereas we want to pass in a JS object here.
+#[wasm_bindgen]
+extern "C" {
+    pub type ImageData;
+
+    #[wasm_bindgen(constructor, catch)]
+    fn new(data: &Uint8ClampedArray, width: f64, height: f64) -> Result<ImageData, JsValue>;
+}
+
+#[wasm_bindgen]
+impl RenderingScene {
+    /// Returns the JS promise object which resolves when the render is complete
+    pub fn promise(&self) -> Promise {
+        self.promise.clone()
+    }
+
+    /// Return a progressive rendering of the image so far
+    #[wasm_bindgen(js_name = imageSoFar)]
+    pub fn image_so_far(&self) -> ImageData {
+        image_data(self.base, self.len, self.width, self.height)
+    }
+}
+
+fn image_data(base: usize, len: usize, width: i32, height: i32) -> ImageData {
+    // Use the raw access available through `memory.buffer`, but be sure to
+    // use `slice` instead of `subarray` to create a copy that isn't backed
+    // by `SharedArrayBuffer`. Currently `ImageData` rejects a view of
+    // `Uint8ClampedArray` that's backed by a shared buffer.
+    //
+    // FIXME: that this may or may not be UB based on Rust's rules. For example
+    // threads may be doing unsynchronized writes to pixel data as we read it
+    // off here. In the context of wasm this may or may not be UB, we're
+    // unclear! In any case for now it seems to work and produces a nifty
+    // progressive rendering. A more production-ready application may prefer to
+    // instead use some form of signaling here to request an update from the
+    // workers instead of synchronously acquiring an update, and that way we
+    // could ensure that even on the Rust side of things it's not UB.
+    let mem = wasm_bindgen::memory().unchecked_into::<WebAssembly::Memory>();
+    let mem = Uint8ClampedArray::new(&mem.buffer()).slice(base as u32, (base + len) as u32);
+    ImageData::new(&mem, width as f64, height as f64).unwrap()
+}

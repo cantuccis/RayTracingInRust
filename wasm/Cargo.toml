@@ -1,15 +1,36 @@
 [package]
-name = "wasm_rust_ray_tracing"
+name = "raytrace-parallel"
 version = "0.1.0"
-edition = "2021"
+authors = ["The wasm-bindgen Developers"]
+edition = "2018"
 
 [lib]
 crate-type = ["cdylib"]
 
 [dependencies]
-result = "1.0.0"
-rand = "0.8.5"
-rayon = "1.5"
-wasm-bindgen = "0.2"
-getrandom = { version = "0.2", features = ["js"] }
+console_error_panic_hook = "0.1"
+js-sys = "0.3.60"
+rayon = "1.1.0"
+rayon-core = "1.5.0"
 rust_ray_tracing = { path = "../rust_ray_tracing" }
+serde-wasm-bindgen = "0.4.3"
+futures-channel-preview = "0.3.0-alpha.18"
+wasm-bindgen = "0.2.83"
+wasm-bindgen-futures = "0.4.33"
+wasm-bindgen-cli-support = "0.2.8"
+getrandom = { version = "0.2", features = ["js"] }
+
+
+[dependencies.web-sys]
+version = "0.3.23"
+features = [
+  'CanvasRenderingContext2d',
+  'ErrorEvent',
+  'Event',
+  'ImageData',
+  'Navigator',
+  'Window',
+  'Worker',
+  'DedicatedWorkerGlobalScope',
+  'MessageEvent',
+]
