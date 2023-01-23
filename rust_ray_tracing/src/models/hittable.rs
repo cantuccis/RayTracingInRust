@@ -12,18 +12,6 @@ pub struct HitRecord {
 }
 
 
-// impl<'a> Clone for HitRecord<'a> {
-//     fn clone(&self) -> HitRecord<'a> {
-//         HitRecord {
-//             t: self.t.to_owned(),
-//             p: self.p.to_owned(),
-//             normal: self.normal.to_owned(),
-//             front_face: self.front_face.to_owned(),
-//             material: Box::new(self.material.as_mut())
-//         }
-//     }
-// }
-
 impl HitRecord {
     pub fn set_face_normal(&mut self, r: &Ray) {
         self.front_face = r.direction().dot(&self.normal) > 0.0;

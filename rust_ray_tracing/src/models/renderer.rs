@@ -136,12 +136,12 @@ impl Renderer {
                 );
 
                 if (center - Point::new(4.0, 0.2, 0.0)).magnitude() > 0.9 {
-                    if choose_material < 0.8 {
+                    if choose_material < 0.6 {
                         let rv = random_vector();
                         let albedo = Color::new(rv.x * rv.x, rv.y * rv.y, rv.z * rv.z);
                         let sphere_material = Arc::new(Lambertian { albedo });
                         world.push(Sphere::new(center, 0.2, sphere_material));
-                    } else if choose_material < 0.95 {
+                    } else if choose_material < 0.7 {
                         let albedo = random_vector_within(0.5, 1.0);
                         let fuzz = random_double_within(0.0, 0.5);
                         let sphere_material = Arc::new(Metal { albedo, fuzz });

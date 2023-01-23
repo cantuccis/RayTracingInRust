@@ -7,7 +7,7 @@ use rayon::{
 use rust_ray_tracing::models::renderer::Renderer;
 
 fn main() {
-    let mut args: Vec<String> = env::args().collect();
+    let args: Vec<String> = env::args().collect();
 
     if args.len() < 2 {
         println!("Usage: rust_ray_tracing_cli <image-width>");

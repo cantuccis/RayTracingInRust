@@ -56,11 +56,3 @@ pub fn random_vector_in_unit_disk() -> Vector3<f64> {
     }
 }
 
-pub fn random_in_hemisphere(normal: &Vector3<f64>) -> Vector3<f64> {
-    let in_unit_sphere = random_vector_in_unit_sphere();
-    if in_unit_sphere.dot(normal) > 0.0 {
-        return in_unit_sphere;
-    } else {
-        return -in_unit_sphere;
-    }
-}
