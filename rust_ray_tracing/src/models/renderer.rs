@@ -124,9 +124,9 @@ impl Renderer {
     }
 
     fn populate_random_scene(world: &mut HittableList) {
-        for a in 0..6 {
+        for a in -11..11 {
             let coord_a = a as f64;
-            for b in -1..3 {
+            for b in -11..11 {
                 let coord_b = b as f64;
                 let choose_material = random_double();
                 let center = Point::new(

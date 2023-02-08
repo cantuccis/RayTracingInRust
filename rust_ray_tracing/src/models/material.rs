@@ -1,7 +1,11 @@
 use nalgebra::Vector3;
-use rand::Rng;
 
-use super::{color::Color, hittable::HitRecord, ray::Ray, util::random_vector_in_unit_sphere};
+use super::{
+    color::Color,
+    hittable::HitRecord,
+    ray::Ray,
+    util::{random_double, random_vector_in_unit_sphere},
+};
 
 pub trait Material: Send + Sync {
     fn scatter(&self, ray_in: &Ray, hit_record: &HitRecord) -> Option<(Ray, Color)>;
@@ -54,25 +58,26 @@ pub struct Dielectric {
 impl Material for Dielectric {
     fn scatter(&self, ray_in: &Ray, hit_record: &HitRecord) -> Option<(Ray, Color)> {
         let attenuation = Vector3::new(1.0, 1.0, 1.0);
-        let (outward_normal, etai_over_etat, cosine) =
-            if ray_in.direction().dot(&hit_record.normal) > 0.0 {
-                let cosine = self.index_of_refraction * ray_in.direction().dot(&hit_record.normal)
-                    / ray_in.direction().magnitude();
-                (-hit_record.normal, self.index_of_refraction, cosine)
+        let refraction_ratio = if hit_record.front_face {
+            1.0 / self.index_of_refraction
+        } else {
+            self.index_of_refraction
+        };
+        let unit_direction = ray_in.direction().normalize();
+
+        let dot_product = (-unit_direction).dot(&hit_record.normal);
+        let cos_theta = if dot_product < 1.0 { dot_product } else { 1.0 };
+        let sin_theta = (1.0 - cos_theta.powi(2)).sqrt();
+
+        let cannot_refract = refraction_ratio * sin_theta > 1.0;
+
+        let direction =
+            if cannot_refract || reflectance(cos_theta, refraction_ratio) > random_double() {
+                reflect(unit_direction, hit_record.normal)
             } else {
-                let cosine =
-                    -ray_in.direction().dot(&hit_record.normal) / ray_in.direction().magnitude();
-                (hit_record.normal, 1.0 / self.index_of_refraction, cosine)
+                refract(&unit_direction, &hit_record.normal, refraction_ratio)
             };
-        if let Some(refracted) = refract(&ray_in.direction(), &outward_normal, etai_over_etat) {
-            let reflect_prob = reflectance(cosine, self.index_of_refraction);
-            if rand::thread_rng().gen::<f64>() >= reflect_prob {
-                let scattered = Ray::new(hit_record.p, refracted);
-                return Some((scattered, attenuation));
-            }
-        }
-        let reflected = reflect(ray_in.direction(), hit_record.normal);
-        let scattered = Ray::new(hit_record.p, reflected);
+        let scattered = Ray::new(hit_record.p, direction);
         Some((scattered, attenuation))
     }
 }
@@ -86,14 +91,19 @@ fn reflectance(cosine: f64, ref_idx: f64) -> f64 {
     r0 + (1.0 - r0) * (1.0 - cosine).powi(5)
 }
 
-fn refract(v: &Vector3<f64>, n: &Vector3<f64>, etai_over_etat: f64) -> Option<Vector3<f64>> {
-    let uv = v.normalize();
-    let dt = uv.dot(&n);
-    let discriminant = 1.0 - etai_over_etat.powi(2) * (1.0 - dt.powi(2));
-    if discriminant > 0.0 {
-        let refracted = etai_over_etat * (uv - n * dt) - n * discriminant.sqrt();
-        Some(refracted)
-    } else {
-        None
-    }
+fn refract(uv: &Vector3<f64>, n: &Vector3<f64>, etai_over_etat: f64) -> Vector3<f64> {
+    let dot_prod = (-uv).dot(&n);
+    let cos_theta = if dot_prod < 1.0 { dot_prod } else { 1.0 };
+    let r_out_prep = etai_over_etat * (uv + cos_theta * n);
+    let r_out_parallel = -((1.0 - r_out_prep.magnitude_squared()).abs()).sqrt() * n;
+    r_out_prep + r_out_parallel
+    // let uv = v.normalize();
+    // let dt = uv.dot(&n);
+    // let discriminant = 1.0 - etai_over_etat.powi(2) * (1.0 - dt.powi(2));
+    // if discriminant > 0.0 {
+    //     let refracted = etai_over_etat * (uv - n * dt) - n * discriminant.sqrt();
+    //     Some(refracted)
+    // } else {
+    //     None
+    // }
 }

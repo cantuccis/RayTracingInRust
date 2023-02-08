@@ -14,11 +14,11 @@ pub struct HitRecord {
 
 impl HitRecord {
     pub fn set_face_normal(&mut self, r: &Ray) {
-        self.front_face = r.direction().dot(&self.normal) > 0.0;
+        self.front_face = r.direction().dot(&self.normal) < 0.0;
         self.normal = if self.front_face {
-            -1.0 * &self.normal
-        } else {
             self.normal
+        } else {
+            -self.normal
         };
     }
 }
