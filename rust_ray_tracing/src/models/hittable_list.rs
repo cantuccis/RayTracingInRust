@@ -1,4 +1,7 @@
+use nalgebra::Vector3;
+
 use super::{
+    aabb::{surrounding_box, AABB},
     hittable::{HitRecord, Hittable},
     ray::Ray,
 };
@@ -13,7 +16,9 @@ impl HittableList {
         self.list.push(Box::new(hittable))
     }
 
-    pub fn new(list: Vec<Box<dyn Hittable>>) -> Self { HittableList { list } }
+    pub fn new(list: Vec<Box<dyn Hittable>>) -> Self {
+        HittableList { list }
+    }
 }
 
 impl Hittable for HittableList {
@@ -28,5 +33,30 @@ impl Hittable for HittableList {
             }
         }
         return temp_record;
+    }
+
+    fn bounding_box(&self, time0: f64, time1: f64) -> Option<super::aabb::AABB> {
+        if self.list.is_empty() {
+            return None;
+        } else {
+            let mut result = AABB {
+                min: Vector3::zeros(),
+                max: Vector3::zeros(),
+            };
+            let mut first_box = true;
+            for object in &self.list {
+                if let Some(bounding_box) = object.bounding_box(time0, time1) {
+                    result = if first_box {
+                        bounding_box
+                    } else {
+                        surrounding_box(&result, &bounding_box)
+                    };
+                    first_box = false;
+                } else {
+                    return None;
+                }
+            }
+            Some(result)
+        }
     }
 }

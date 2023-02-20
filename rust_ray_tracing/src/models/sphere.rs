@@ -1,8 +1,9 @@
-use std::sync::Arc;
-use nalgebra::Vector3;
+use super::aabb::AABB;
 use super::hittable::{HitRecord, Hittable};
 use super::material::Material;
 use super::ray::Ray;
+use nalgebra::Vector3;
+use std::sync::Arc;
 
 pub struct Sphere {
     center: Vector3<f64>,
@@ -40,15 +41,33 @@ impl Hittable for Sphere {
                 return None;
             }
         }
-
+        let normal = (ray.at(root) - self.center) / self.radius;
+        let (u, v) = get_sphere_uv(&normal);
         let mut hit_record = HitRecord {
             t: root,
             p: ray.at(root),
-            normal: (ray.at(root) - self.center) / self.radius,
+            u,
+            v,
+            normal,
             front_face: true,
             material: self.material.clone(),
         };
         hit_record.set_face_normal(&ray);
         return Some(hit_record);
     }
+
+    fn bounding_box(&self, time0: f64, time1: f64) -> Option<AABB> {
+        Some(AABB::new(
+            self.center - Vector3::new(self.radius, self.radius, self.radius),
+            self.center + Vector3::new(self.radius, self.radius, self.radius),
+        ))
+    }
+}
+
+fn get_sphere_uv(p: &Vector3<f64>) -> (f64, f64) {
+    let phi = p.z.atan2(p.x);
+    let theta = p.y.asin();
+    let u = 1.0 - (phi + std::f64::consts::PI) / (2.0 * std::f64::consts::PI);
+    let v = (theta + std::f64::consts::FRAC_PI_2) / std::f64::consts::PI;
+    (u, v)
 }

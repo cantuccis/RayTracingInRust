@@ -1,5 +1,6 @@
 use super::camera::Camera;
 use super::color::Color;
+use super::cube::Cube;
 use super::hittable::Hittable;
 use super::hittable_list::HittableList;
 use super::material::*;
@@ -88,9 +89,25 @@ impl Renderer {
             albedo: Color::new(0.7, 0.6, 0.5),
             fuzz: 0.0,
         });
-        world.push(Sphere::new(Point::new(0.0, 1.0, 0.0), 1.0, material1));
-        world.push(Sphere::new(Point::new(-4.0, 1.0, 0.0), 1.0, material2));
-        world.push(Sphere::new(Point::new(4.0, 1.0, 0.0), 1.0, material3));
+        let material4 = Arc::new(Metal {
+            albedo: Color::new(0.7, 0.1, 0.5),
+            fuzz: 0.4,
+        });
+        let axis_color = Arc::new(Lambertian {
+            albedo: Color::new(0.3, 0.3, 0.3),
+        });
+        
+        world.push(Sphere::new(Point::new(0.0, 1.0, 0.0), 1.0, material1.clone()));
+        world.push(Sphere::new(Point::new(-4.0, 1.0, 0.0), 1.0, material2.clone()));
+        world.push(Sphere::new(Point::new(4.0, 1.0, -0.5), 1.0, material3.clone()));
+        world.push(Cube::new(Point::new(3.0, 0.0, 0.8), Point::new(4.0, 0.7, 1.5), material3.clone()));
+        world.push(Sphere::new(Point::new(3.5, 0.9, 1.15), 0.2, material4.clone()));
+
+
+        world.push(Cube::new(Point::new(0.0, 0.0, 0.0), Point::new(10.0, 0.01, 0.01), axis_color.clone()));
+        world.push(Cube::new(Point::new(0.0, 0.0, 0.0), Point::new(0.01, 10.0, 0.01), axis_color.clone()));
+        world.push(Cube::new(Point::new(0.0, 0.0, 0.0), Point::new(0.01, 0.01, 10.0), axis_color.clone()));
+
 
         // Image
         let aspect_ratio = 3.0 / 2.0;
@@ -141,7 +158,7 @@ impl Renderer {
                         let albedo = Color::new(rv.x * rv.x, rv.y * rv.y, rv.z * rv.z);
                         let sphere_material = Arc::new(Lambertian { albedo });
                         world.push(Sphere::new(center, 0.2, sphere_material));
-                    } else if choose_material < 0.7 {
+                    } else if choose_material < 0.9 {
                         let albedo = random_vector_within(0.5, 1.0);
                         let fuzz = random_double_within(0.0, 0.5);
                         let sphere_material = Arc::new(Metal { albedo, fuzz });

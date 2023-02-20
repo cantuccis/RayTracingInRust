@@ -7,4 +7,7 @@ pub mod hittable_list;
 pub mod camera;
 pub mod material;
 pub mod renderer;
+pub mod aabb;
+pub mod rect;
+pub mod cube;
 mod util;
